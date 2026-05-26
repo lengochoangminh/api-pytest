@@ -5,6 +5,7 @@ def test_case():
     """
     [Step1] Authenticate and get current user information
     [Step2] Update user information with valid payload
+    [Step2b] Assert response body structure (contract validation)
     [Step3] Verify information was updated successfully
     [Step4] Restore original information for test isolation
     """
@@ -73,6 +74,43 @@ def test_case():
         use24hour=update_data["use24hour"],
     )
     print(f"  📋 Update response status: {update_response.status_code}")
+
+    # ── Response contract assertions ──────────────────────────────────────────
+    print("\n✅ [Step 2b] Asserting response body structure (contract validation)")
+
+    assert update_response.status_code == 200, (
+        f"❌ FAIL: Expected HTTP 200, got {update_response.status_code}"
+    )
+
+    content_type = update_response.headers.get("Content-Type", "")
+    assert "application/json" in content_type, (
+        f"❌ FAIL: Expected Content-Type 'application/json', got '{content_type}'"
+    )
+    print(f"  ✅ Content-Type: {content_type}")
+
+    try:
+        response_body = update_response.json()
+    except Exception as e:
+        assert False, f"❌ FAIL: Response body is not valid JSON — {e}"
+
+    assert "errorCode" in response_body, (
+        "❌ FAIL: Required field 'errorCode' is missing from response body"
+    )
+    assert isinstance(response_body["errorCode"], int), (
+        f"❌ FAIL: 'errorCode' must be an integer, got {type(response_body['errorCode']).__name__}"
+    )
+    print(f"  ✅ errorCode present and is int: {response_body['errorCode']}")
+
+    assert "message" in response_body, (
+        "❌ FAIL: Required field 'message' is missing from response body"
+    )
+    assert isinstance(response_body["message"], str), (
+        f"❌ FAIL: 'message' must be a string, got {type(response_body['message']).__name__}"
+    )
+    print(f"  ✅ message present and is str: '{response_body['message']}'")
+
+    print("  ✅ PASS: Response body structure is valid")
+    # ─────────────────────────────────────────────────────────────────────────
 
     if update_response.status_code == 200:
         try:

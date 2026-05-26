@@ -6,7 +6,8 @@ def test_case():
     [Step1] Test update info API with missing required fields
     [Step2] Test update info API with invalid data formats
     [Step3] Test update info API with malicious payloads
-    [Step4] Verify proper error responses for all invalid scenarios
+    [Step4] Test update info API with non-existent accountId (valid format, unknown ID)
+    [Step5] Verify proper error responses for all invalid scenarios
     """
 
     email = UID_USER_NAME()
@@ -200,9 +201,77 @@ def test_case():
         f"\n  📊 Malicious Payload Tests: {malicious_passed}/{malicious_total} passed"
     )
 
+    # Step 4: Test non-existent accountId (valid format, but does not exist in the system)
+    print("\n[Step 4] Testing non-existent accountId...")
+
+    non_existent_tests = [
+        {
+            "name": "well_formed_but_nonexistent_accountId",
+            "account_id": "00000000000001",
+            "description": "14-digit numeric ID that does not belong to any account",
+        },
+        {
+            "name": "sequential_boundary_accountId",
+            "account_id": "99999999999999",
+            "description": "14-digit numeric ID at upper boundary — unlikely to exist",
+        },
+    ]
+
+    non_existent_passed = 0
+    non_existent_total = len(non_existent_tests)
+
+    for i, test_case in enumerate(non_existent_tests, 1):
+        print(f"\n  Test {i}/{non_existent_total}: {test_case['name']}")
+        print(f"    Description: {test_case['description']}")
+        print(f"    accountId: {test_case['account_id']}")
+
+        try:
+            response = uid_client.update_profile(
+                account_id=test_case["account_id"],
+                email=email,
+                first_name="TestName",
+            )
+
+            print(f"    Status: {response.status_code}")
+
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    error_code = data.get("errorCode")
+                    message = data.get("message", "No message")
+
+                    print(f"    Error Code: {error_code}")
+                    print(f"    Message: {message}")
+
+                    if error_code != 0:
+                        print("    ✅ PASS: Non-existent accountId properly rejected")
+                        non_existent_passed += 1
+                    else:
+                        print(
+                            "    ❌ FAIL: Non-existent accountId was accepted (errorCode 0) — "
+                            "server may not validate accountId existence"
+                        )
+
+                except Exception:
+                    print("    ⚠️  JSON parsing failed")
+
+            elif response.status_code in [400, 401, 403, 404]:
+                print(f"    ✅ PASS: HTTP-level rejection (status {response.status_code})")
+                non_existent_passed += 1
+            else:
+                print(f"    ⚠️  Unexpected status: {response.status_code}")
+
+        except Exception as request_error:
+            print(f"    ✅ PASS: Request-level rejection: {request_error}")
+            non_existent_passed += 1
+
+    print(
+        f"\n  📊 Non-Existent AccountId Tests: {non_existent_passed}/{non_existent_total} passed"
+    )
+
     # # Summary
-    total_security_tests = missing_field_passed + format_passed + malicious_passed
-    max_security_tests = missing_field_total + format_total + malicious_total
+    total_security_tests = missing_field_passed + format_passed + malicious_passed + non_existent_passed
+    max_security_tests = missing_field_total + format_total + malicious_total + non_existent_total
 
     print("\n=== Security Validation Summary ===")
     print(

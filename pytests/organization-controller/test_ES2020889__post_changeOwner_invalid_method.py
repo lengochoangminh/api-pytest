@@ -28,11 +28,7 @@ def test_case():
             {"name": "DELETE_method", "method": "DELETE", "expected_codes": [405, 400]},
             {"name": "PATCH_method", "method": "PATCH", "expected_codes": [405, 400]},
             {"name": "HEAD_method", "method": "HEAD", "expected_codes": [405, 400, 404]},
-            {
-                "name": "OPTIONS_method",
-                "method": "OPTIONS",
-                "expected_codes": [200, 204, 405],
-            },
+            {"name": "OPTIONS_method", "method": "OPTIONS", "expected_codes": [200, 204, 405]},
         ]
 
         method_passed = 0
