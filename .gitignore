@@ -1,0 +1,28 @@
+# Credentials and environment variables
+.env
+.secret
+
+# Python cache
+__pycache__/
+.pytest_cache/
+
+# Log files
+*.log
+*.jsonl
+*.json
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python compiled files
+.__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+.idea/
+allure-results/
+logs/*
