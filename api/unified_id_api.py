@@ -318,6 +318,66 @@ class Unified_ID_API:
             log.logger.error(f"Exception during token generation: {e}")
             return None
 
+    def security_enable(
+        self,
+        email: str,
+        password: str,
+        token: Optional[str] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> httpx.Response:
+        """
+        POST /api/v1/security/enable
+        Enable security center for account. Returns a security token on success.
+        """
+        url = f"{self.service_url}/api/v1/security/enable"
+
+        headers = {"Content-Type": "application/json"}
+
+        if token is not None:
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+        elif self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+
+        if custom_headers:
+            headers_lower = {k.lower(): k for k in headers}
+            for key, value in custom_headers.items():
+                key_lower = key.lower()
+                if key_lower in headers_lower:
+                    del headers[headers_lower[key_lower]]
+                headers[key] = value
+
+        payload = {}
+        if email is not None:
+            payload["email"] = email
+        if password is not None:
+            payload["password"] = password
+
+        method = method.upper()
+        if method == "POST":
+            response = self.client.post(url, headers=headers, json=payload)
+        elif method == "GET":
+            response = self.client.get(url, headers=headers, params=payload)
+        elif method == "PUT":
+            response = self.client.put(url, headers=headers, json=payload)
+        elif method == "DELETE":
+            response = self.client.delete(url, headers=headers)
+        elif method == "PATCH":
+            response = self.client.patch(url, headers=headers, json=payload)
+        elif method == "HEAD":
+            response = self.client.head(url, headers=headers)
+        elif method == "OPTIONS":
+            response = self.client.options(url, headers=headers)
+        else:
+            response = self.client.request(method, url, headers=headers, json=payload)
+
+        log.write_log(
+            "info",
+            f"{method} /api/v1/security/enable - Status: {response.status_code}",
+        )
+        return response
+
     def reset_password(
         self,
         security_token: str,
