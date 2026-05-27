@@ -23,6 +23,7 @@ class Unified_ID_API:
         self.email = email
         self.pwd = UID_PWD() if pwd is None else pwd
         self.access_token = None
+        self.refresh_token = None
         self.service_url = None
 
         # HTTP client
@@ -159,6 +160,7 @@ class Unified_ID_API:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         self.access_token = data.get("result", {}).get("accessToken", "")
+        self.refresh_token = data.get("result", {}).get("refreshToken", "")
         log.write_log("info", "Access token obtained successfully")
 
     def _load_tokens(self, email: str) -> Tuple[str, str]:
@@ -178,6 +180,7 @@ class Unified_ID_API:
             if not serviceUrl or not access_token or not is_token_valid:
                 return "", ""
 
+            self.refresh_token = data.get("result", {}).get("refreshToken", "")
             return (serviceUrl, access_token)
         except Exception as e:
             log.write_log("warning", f"Failed to load tokens: {e}")
@@ -743,6 +746,87 @@ class Unified_ID_API:
         except Exception as e:
             log.logger.error(f"Failed to register user {email}: {e}")
 
+    def register_user(
+        self,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        region_code: Optional[str] = None,
+        language: Optional[str] = None,
+        phone: Optional[str] = None,
+        subscription: Optional[bool] = None,
+        terminal_uuid: Optional[str] = None,
+        token: Optional[str] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> httpx.Response:
+        """
+        POST /api/v1/register
+        Register a new tp-link ID user (public endpoint, no auth required).
+
+        Required fields: email, firstName, lastName, password, regionCode
+        Password pattern: 8-32 chars, must mix at least two of: letters, digits, special chars.
+        """
+        url = f"{API_BASE_URL()}/api/v1/register"
+
+        headers = {"Content-Type": "application/json"}
+
+        if token is not None:
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+
+        if custom_headers:
+            headers_lower = {k.lower(): k for k in headers}
+            for key, value in custom_headers.items():
+                key_lower = key.lower()
+                if key_lower in headers_lower:
+                    del headers[headers_lower[key_lower]]
+                headers[key] = value
+
+        payload: Dict = {}
+        if email is not None:
+            payload["email"] = email
+        if password is not None:
+            payload["password"] = password
+        if first_name is not None:
+            payload["firstName"] = first_name
+        if last_name is not None:
+            payload["lastName"] = last_name
+        if region_code is not None:
+            payload["regionCode"] = region_code
+        if language is not None:
+            payload["language"] = language
+        if phone is not None:
+            payload["phone"] = phone
+        if subscription is not None:
+            payload["subscription"] = subscription
+        if terminal_uuid is not None:
+            payload["terminalUUID"] = terminal_uuid
+
+        method = method.upper()
+        if method == "POST":
+            response = self.client.post(url, headers=headers, json=payload)
+        elif method == "GET":
+            response = self.client.get(url, headers=headers, params=payload)
+        elif method == "PUT":
+            response = self.client.put(url, headers=headers, json=payload)
+        elif method == "DELETE":
+            response = self.client.delete(url, headers=headers)
+        elif method == "PATCH":
+            response = self.client.patch(url, headers=headers, json=payload)
+        elif method == "HEAD":
+            response = self.client.head(url, headers=headers)
+        elif method == "OPTIONS":
+            response = self.client.options(url, headers=headers)
+        else:
+            response = self.client.request(method, url, headers=headers, json=payload)
+
+        log.write_log(
+            "info", f"{method} /api/v1/register - Status: {response.status_code}"
+        )
+        return response
+
     # ============================================================================
     # Organization-related
     # ============================================================================
@@ -1271,6 +1355,73 @@ class Unified_ID_API:
         log.write_log(
             "info",
             f"{method} /api/v1/get-link-to-subsystem - Status: {response.status_code}",
+        )
+        return response
+
+    # ============================================================================
+    # App Account — Token Refresh
+    # ============================================================================
+
+    def apps_refresh_token(
+        self,
+        refresh_token: Optional[str] = None,
+        client_id: Optional[str] = None,
+        app_type: Optional[str] = None,
+        token: Optional[str] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        method: str = "POST",
+    ) -> httpx.Response:
+        """
+        POST /api/v1/apps/refresh-token
+        Get Client Refresh Token for App users.
+        """
+        url = f"{self.service_url}/api/v1/apps/refresh-token"
+
+        headers = {"Content-Type": "application/json"}
+
+        if token is not None:
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+        elif self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+
+        if custom_headers:
+            headers_lower = {k.lower(): k for k in headers}
+            for key, value in custom_headers.items():
+                key_lower = key.lower()
+                if key_lower in headers_lower:
+                    del headers[headers_lower[key_lower]]
+                headers[key] = value
+
+        payload: Dict = {}
+        if refresh_token is not None:
+            payload["refreshToken"] = refresh_token
+        if client_id is not None:
+            payload["clientId"] = client_id
+        if app_type is not None:
+            payload["appType"] = app_type
+
+        method = method.upper()
+        if method == "POST":
+            response = self.client.post(url, headers=headers, json=payload)
+        elif method == "GET":
+            response = self.client.get(url, headers=headers, params=payload)
+        elif method == "PUT":
+            response = self.client.put(url, headers=headers, json=payload)
+        elif method == "DELETE":
+            response = self.client.delete(url, headers=headers)
+        elif method == "PATCH":
+            response = self.client.patch(url, headers=headers, json=payload)
+        elif method == "HEAD":
+            response = self.client.head(url, headers=headers)
+        elif method == "OPTIONS":
+            response = self.client.options(url, headers=headers)
+        else:
+            response = self.client.request(method, url, headers=headers, json=payload)
+
+        log.write_log(
+            "info",
+            f"{method} /api/v1/apps/refresh-token - Status: {response.status_code}",
         )
         return response
 

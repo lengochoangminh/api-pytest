@@ -4,6 +4,10 @@ applyTo: "pytests/**"
 
 # API Test Script Generation — Project Conventions
 
+> **Skills available**:
+> - `api-coverage-workflow` (`.github/skills/api-coverage-workflow/SKILL.md`) — fetch Swagger spec, compute coverage gaps, display numbered uncovered list, let the user select one/some/ALL, then generate.
+> - `api-pytest-generation` (`.github/skills/api-pytest-generation/SKILL.md`) — generate the full test suite for a single known endpoint.
+
 When the user provides an API endpoint (Swagger spec, curl example, or description), generate a full set of test scripts following every rule in this file exactly.
 
 ---
