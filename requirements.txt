@@ -5,3 +5,4 @@ httpx==0.28.1
 allure-pytest==2.15.0
 pytest-xdist==3.8.0
 pytest-rerunfailures==16.1
+locust==2.43.3
