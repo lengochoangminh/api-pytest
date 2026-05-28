@@ -30,6 +30,7 @@ Automated API test suite for the **Unified ID** service, covering user profile m
 | OTP generation | [pyotp](https://pyauth.github.io/pyotp/) |
 | Environment config | [python-dotenv](https://pypi.org/project/python-dotenv/) |
 | Retry on failure | [pytest-rerunfailures](https://github.com/pytest-dev/pytest-rerunfailures) |
+| Performance testing | [Locust](https://locust.io/) |
 
 ---
 
@@ -49,6 +50,7 @@ api/
 pytests/
   __init__.py        ← shared imports (API client, config, helpers, logger)
   test_*.py          ← individual test modules; one function per file
+  performance-test/  ← Locust performance / load test scripts
 ```
 
 **Request flow for each test:**
@@ -100,27 +102,6 @@ copy .env\.env.beta_use1.example .env\.env.beta_use1   # if an example is provid
 # then fill in the actual values
 ```
 
-**Minimum required variables in your `.env` file:**
-
-```dotenv
-API_BASE_URL=https://<host>
-
-# User account
-UID_PWD=<password>
-UID_ACCOUNT_ID=<account-id>
-UID_USER_NAME=<email>
-
-# Organisation
-CERT_COMPANY_ID=<id>
-CERT_COMPANY_NAME=<name>
-ORG_OWNER_EMAIL=<email>
-ORG_OWNER_ACCOUNT_ID=<id>
-NON_CERT_COMPANY_ID=<id>
-NON_CERT_COMPANY_NAME=<name>
-ORG_MEMBER_EMAIL=<email>
-ORG_MEMBER_ACCOUNT_ID=<id>
-```
-
 ### Running Tests
 
 ```bash
@@ -152,19 +133,23 @@ api-pytest/
 ├── .secret/                       # Runtime secrets / token cache (git-ignored)
 │   └── auth_tokens.json           # Cached auth tokens (auto-generated)
 ├── .github/
-│   ├── agents/
-│   │   └── qa-subagent.agent.md   # Custom QA agent definition for Copilot
 │   └── instructions/
 │       └── api-test-generation.instructions.md   # Conventions applied automatically when creating tests under pytests/
+│   └── skills/
+│       └── api-coverage-workflow   # Fetch the Swagger, compute coverage gaps, let the user pick endpoints, then generate full pytest suites for each selection.
+│       └── api-pytest-generation   # Generates pytest test suite for one specified Unified ID API endpoint
 ├── api/
 │   └── unified_id_api.py          # HTTP client for all Unified ID endpoints
 ├── logs/
 │   └── log<YYYY-MM-DD>.txt        # Daily rotating log file
 ├── pytests/
 │   ├── __init__.py                # Shared imports used by every test module
-│   ├── organization-controller/   # Tests for organization management endpoints
-│   ├── tplink-id-controller/      # Tests for TP-Link ID / subsystem endpoints
-│   └── user-center-controller/    # Tests for user profile endpoints
+│   ├── api-test/
+│   │   ├── organization-controller/   # Tests for organization management endpoints
+│   │   ├── tplink-id-controller/      # Tests for TP-Link ID / subsystem endpoints
+│   │   └── user-center-controller/    # Tests for user profile endpoints
+│   └── performance-test/
+│       └── locustfile_updateInfo.py   # Locust load test — POST /api/v1/account/updateInfo
 ├── utilities/
 │   ├── helpers.py                 # Utility class: random data, UUID, session code, TOTP
 │   └── log_util.py                # Logger wrapper with Allure step integration
@@ -172,6 +157,24 @@ api-pytest/
 ├── conftest.py                    # pytest hooks, CLI options, session fixtures
 ├── pytest.ini                     # pytest configuration (paths, reruns, filters)
 └── requirements.txt               # Python dependencies
+```
+
+---
+
+# Performance Tests
+
+Load and performance tests for the Unified ID API, built with [Locust 2.x](https://locust.io/).
+
+```
+performance-test/
+├── common/
+│   ├── auth.py            ← credential pool + make_api_client() factory
+│   └── shapes.py          ← reusable LoadTestShape classes (StagesShape, SoakShape, SpikeShape)
+├── scenarios/
+│   └── user_journey.py    ← realistic multi-endpoint user flow (write + read)
+├── perf_updateInfo.py     ← focused load test: POST /api/v1/account/updateInfo
+├── perf_userInfo.py       ← utility users: GET /api/v1/user-info (latency + soak/stress)
+└── README.md              ← this file
 ```
 
 ---
