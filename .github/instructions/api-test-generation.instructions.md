@@ -262,7 +262,16 @@ End with a positive validation: confirm POST (the correct method) returns `error
 
 ## 7. Security Test File (optional, `_security.py`)
 
-Create a fifth file `test_{TICKET}__post_{endpoint_name}_security.py` when the endpoint accepts an identity parameter (`accountId`, `userId`, `email`) that could be used for horizontal privilege escalation.
+Create a fifth file `test_{TICKET}__{http_method}_{endpoint_name}_security.py` when **either** of the following conditions applies:
+
+| Trigger | Description |
+|---------|-------------|
+| **Identity field in payload** | Endpoint accepts `accountId`, `userId`, or `email` — could be used for IDOR / identity mismatch |
+| **Org ownership field in payload** | Endpoint accepts `orgCode` (or similar resource ID) — could allow cross-org modification or role bypass |
+
+---
+
+### Pattern A — Identity-field IDOR (payload contains `accountId`, `userId`, or `email`)
 
 **Always include:**
 
@@ -280,7 +289,45 @@ finally:
     victim_client.close()
 ```
 
-Use proper `assert` for every security check — these must cause real test failures, not just print `❌`.
+---
+
+### Pattern B — Org ownership isolation (payload contains `orgCode` or similar resource ID)
+
+**Always include:**
+
+1. **Vertical privilege escalation** — Authenticate as an org **member** (non-owner), send the org's `orgCode`. Assert rejection. Tests that knowing the orgCode is not sufficient — the caller must own/manage it.
+2. **Cross-org IDOR** — Authenticate as owner of Org A, send Org B's `orgCode`. Assert rejection. Tests horizontal tenant isolation.
+3. **No-org isolation** — Authenticate as a user with **no org membership** (`UID_USER_NAME`), send any `orgCode`. Assert rejection.
+4. **Post-attack verification** — Confirm the legitimate owner can still operate normally (proving state was not corrupted and their role is intact).
+
+```python
+owner_client        = Unified_ID_API(ORG_OWNER_EMAIL())
+member_client       = Unified_ID_API(ORG_MEMBER_EMAIL())
+unprivileged_client = Unified_ID_API(UID_USER_NAME())
+try:
+    ...
+finally:
+    owner_client.close()
+    member_client.close()
+    unprivileged_client.close()
+```
+
+**Post-attack verification pattern** — call a legitimate owner-only action and assert `errorCode == 0`. If the owner gets `401`/`403`, state may have been corrupted by an attack:
+
+```python
+verify_response = owner_client.some_method(org_code=cert_org_code, ...)
+assert verify_response.json().get("errorCode") == 0, (
+    "❌ SECURITY CONCERN: Legitimate owner can no longer operate — possible state corruption."
+)
+```
+
+---
+
+**Rules that apply to both patterns:**
+
+- Use proper `assert` for every security check — these must cause real test failures, not just print `❌`.
+- Always use two or three separate `Unified_ID_API` clients (attacker + victim/owner) and close all in `finally`.
+- The post-attack verification step must always run (put inside `try`, before `finally` closes clients).
 
 ---
 

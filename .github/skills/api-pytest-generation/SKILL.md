@@ -58,7 +58,7 @@ If the endpoint is ambiguous, ask:
 ### Step 3 — Check or Create the API Client Method
 
 1. Search `api/unified_id_api.py` for a method that calls the endpoint path.
-2. **If found**: verify it returns `httpx.Response` and supports `token`, `custom_headers`, and `method` parameters. If not, create a new method (do **not** modify the existing one).
+2. **If found**: use it as-is. Do **not** create a duplicate method.
 3. **If not found**: create a new method using the template in section 8 of the instruction file.
 
 Key rules for the new method:
