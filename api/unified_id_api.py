@@ -1210,6 +1210,125 @@ class Unified_ID_API:
             log.logger.error(f"Failed to withdraw organization application with joinOrgRecordId {joinOrgRecordId}: {e}")
 
     # ============================================================================
+    # Verified Organization
+    # ============================================================================
+
+    def verify_org(
+        self,
+        org_code: Optional[str] = None,
+        name: Optional[str] = None,
+        org_type: Optional[str] = None,
+        region: Optional[str] = None,
+        address: Optional[str] = None,
+        state_or_province: Optional[str] = None,
+        city: Optional[str] = None,
+        post_code: Optional[str] = None,
+        contact: Optional[str] = None,
+        contact_phone: Optional[str] = None,
+        contact_email: Optional[str] = None,
+        description: Optional[str] = None,
+        tax_number: Optional[str] = None,
+        website: Optional[str] = None,
+        token: Optional[str] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        method: str = "PUT",
+    ) -> httpx.Response:
+        """
+        PUT /api/v1/orgs/verifiedOrg
+        Update verified organization information.
+
+        Args:
+            org_code: Organization code (e.g., USUI2604G2D1659K)
+            name: Organization name (max 64 chars)
+            org_type: Organization type enum value
+            region: Region code
+            address: Street address (max 256 chars)
+            state_or_province: State or province (max 100 chars)
+            city: City name (max 100 chars)
+            post_code: Postal code (max 10 chars)
+            contact: Contact person name (max 100 chars)
+            contact_phone: Contact phone number
+            contact_email: Contact email address
+            description: Organization description (max 512 chars)
+            tax_number: Tax/VAT number (max 64 chars)
+            website: Organization website URL (max 64 chars, must include protocol)
+            token: Optional custom authorization token for testing
+            custom_headers: Optional custom headers for testing
+            method: HTTP method (default: PUT, supports others for testing)
+        """
+        url = f"{self.service_url}/api/v1/orgs/verifiedOrg"
+
+        headers = {"Content-Type": "application/json"}
+
+        if token is not None:
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+        elif self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+
+        if custom_headers:
+            headers_lower = {k.lower(): k for k in headers}
+            for key, value in custom_headers.items():
+                key_lower = key.lower()
+                if key_lower in headers_lower:
+                    del headers[headers_lower[key_lower]]
+                headers[key] = value
+
+        payload: Dict = {}
+        if org_code is not None:
+            payload["orgCode"] = org_code
+        if name is not None:
+            payload["name"] = name
+        if org_type is not None:
+            payload["type"] = org_type
+        if region is not None:
+            payload["region"] = region
+        if address is not None:
+            payload["address"] = address
+        if state_or_province is not None:
+            payload["stateOrProvince"] = state_or_province
+        if city is not None:
+            payload["city"] = city
+        if post_code is not None:
+            payload["postCode"] = post_code
+        if contact is not None:
+            payload["contact"] = contact
+        if contact_phone is not None:
+            payload["contactPhone"] = contact_phone
+        if contact_email is not None:
+            payload["contactEmail"] = contact_email
+        if description is not None:
+            payload["description"] = description
+        if tax_number is not None:
+            payload["taxNumber"] = tax_number
+        if website is not None:
+            payload["website"] = website
+
+        method = method.upper()
+        if method == "PUT":
+            response = self.client.put(url, headers=headers, json=payload)
+        elif method == "POST":
+            response = self.client.post(url, headers=headers, json=payload)
+        elif method == "GET":
+            response = self.client.get(url, headers=headers, params=payload)
+        elif method == "DELETE":
+            response = self.client.delete(url, headers=headers)
+        elif method == "PATCH":
+            response = self.client.patch(url, headers=headers, json=payload)
+        elif method == "HEAD":
+            response = self.client.head(url, headers=headers)
+        elif method == "OPTIONS":
+            response = self.client.options(url, headers=headers)
+        else:
+            response = self.client.request(method, url, headers=headers, json=payload)
+
+        log.write_log(
+            "info",
+            f"{method} /api/v1/orgs/verifiedOrg - Status: {response.status_code}",
+        )
+        return response
+
+    # ============================================================================
     # Organization Ownership Transfer
     # ============================================================================
 
